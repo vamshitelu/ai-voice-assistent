@@ -1,0 +1,108 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Voice Assistant</title>
+</head>
+<body>
+    <h2>My AI Voice Assistant</h2>
+
+    <button onclick="startListening()">🎤 Speak</button>
+
+    <p id="question">Your question appears here</p>
+    <p id="answer"></p>
+
+    <script>
+        const SpeechRecognition =
+            window.SpeechRecognition ||
+            window.webkitSpeechRecognition;
+
+        if (!SpeechRecognition) {
+            alert("Speech recognition is not supported. Use Chrome.");
+        }
+
+        const recognition = new SpeechRecognition();
+        recognition.lang = "en-IN";
+
+        function startListening() {
+            recognition.start();
+        }
+
+
+        // Remove unwanted Markdown and special characters
+        function cleanTextForSpeech(text) {
+            return text
+            // Remove Markdown bold and italic
+            .replace(/\*\*/g, "")
+            .replace(/\*/g, "")
+            .replace(/__/g, "")
+            .replace(/_/g, "")
+
+            // Remove Markdown headings
+            .replace(/^#+\s*/gm, "")
+
+            // Remove backticks
+            .replace(/`/g, "")
+
+            // Remove Markdown links, keep link text
+            .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+
+            // Remove unwanted symbols (preserve $)
+            .replace(/[–—#>*~|]/g, " ")
+
+            // Normalize whitespace
+            .replace(/\s+/g, " ")
+            .trim();
+        }
+
+        recognition.onresult = async (event) => {
+            const text = event.results[0][0].transcript;
+
+            document.getElementById("question").innerText = text;
+
+            try {
+                const response = await fetch("/chat", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        message: text
+                    })
+                });
+
+                const data = await response.json();
+
+                console.log("API Response:", data);
+
+                if (!response.ok) {
+                    throw new Error(data.detail || "API request failed");
+                }
+
+                //const answer = data.answer;
+
+                document.getElementById("answer").innerText = data.answer;
+
+                 // Clean response only for speech
+                const cleanAnswer = cleanTextForSpeech(data.answer);
+
+                const speech = new SpeechSynthesisUtterance(cleanAnswer);
+
+                speech.lang = "en-IN";
+                speech.rate = 1;
+                speech.pitch = 1;
+                speech.volume = 1;
+
+                window.speechSynthesis.cancel();
+                window.speechSynthesis.speak(speech);
+
+            } catch (error) {
+                console.error("Full error:", error);
+
+                document.getElementById("answer").innerText =
+                    "Error: " + (error.message || JSON.stringify(error));
+            }
+        };
+    </script>
+</body>
+</html>

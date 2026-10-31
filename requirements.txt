@@ -1,0 +1,11 @@
+python-dotenv
+openai
+sounddevice
+soundfile
+edge-tts 
+pygame
+anthropic
+groq
+fastapi
+uvicorn
+python-multipart
